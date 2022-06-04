@@ -1,0 +1,94 @@
+#include "mainwindow.h"
+#include "ui_mainwindow.h"
+#include <cstdlib>
+#include <QDebug>
+#include <stdlib.h>
+#include <signal.h>
+#include <sys/time.h>
+#include <stdio.h>
+#include <sched.h>
+
+
+MainWindow::MainWindow(QWidget *parent)
+    : QMainWindow(parent)
+    , ui(new Ui::MainWindow){
+    ui->setupUi(this);
+    processList = "ps -auf | tail -n +2 | awk '{print $2}'";
+
+    connect(ui->kill,SIGNAL(clicked(bool)),
+            this,SLOT(signal_kill()));
+
+    connect(ui->continuei,SIGNAL(clicked(bool)),
+            this,SLOT(signal_cont()));
+
+    connect(ui->stop,SIGNAL(clicked(bool)),
+            this,SLOT(signal_stop()));
+
+    connect(ui->butomCpu,SIGNAL(clicked(bool)),
+            this,SLOT(alocar_cpu()));
+
+
+    //getProcess();
+}
+
+MainWindow::~MainWindow()
+{
+    delete ui;
+}
+
+QStringList MainWindow::getProcess()
+{
+    process.start("sh", QStringList() << "-c" << processList);
+    process.waitForFinished(-1);
+
+    QString str = process.readAllStandardOutput();
+    QStringList process_list = str.split("\n");
+
+
+    process_list.removeLast();
+    qDebug() << process_list;
+
+    return process_list;
+}
+
+void MainWindow::signal_kill()
+{
+    numberPid = ui->lineEdit->text().toInt();
+    qDebug() << numberPid;
+    kill(numberPid,SIGKILL);
+}
+
+void MainWindow::signal_cont()
+{
+    numberPid = ui->lineEdit->text().toInt();
+    qDebug() << numberPid;
+    kill(numberPid,SIGCONT);
+}
+
+void MainWindow::signal_stop()
+{
+    numberPid = ui->lineEdit->text().toInt();
+    qDebug() << numberPid;
+    kill(numberPid,SIGSTOP);
+}
+
+void MainWindow::alocar_cpu()
+{
+
+    cpu_set_t  mask;  // máscara para habilitação de CPUs
+    CPU_ZERO(&mask);
+    numberPid = ui->lineEdit->text().toInt();
+    numberCpu = ui->getCpu->text().toInt();
+    qDebug() << numberCpu;
+    qDebug() << numberPid;
+    CPU_SET(numberCpu, &mask);    // alocar na CPU 0
+    sched_setaffinity(numberPid, sizeof(mask), &mask);
+
+    //while(1); // loop infinito - uso intensivo de CPU
+}
+
+
+
+
+// ps -auf | tail -n +2 | awk '{print $2}'
+
